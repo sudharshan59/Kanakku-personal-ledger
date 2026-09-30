@@ -1,0 +1,9 @@
+{
+  "name": "Kanakku Monthly Money Tracker",
+  "short_name": "Kanakku",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f5ef",
+  "theme_color": "#10251f",
+  "icons": []
+}

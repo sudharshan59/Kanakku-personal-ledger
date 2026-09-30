@@ -1,0 +1,10 @@
+.env
+.gradle/
+build/
+local.properties
+*.pyc
+*.pyo
+*.pyd
+*.env
+*.report
+*.log

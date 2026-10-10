@@ -41,9 +41,23 @@
     </section>
 
     <section class="balance-card">
-      <div class="balance-heading"><span>Available balance</span></div>
+      <div class="balance-heading"><span>Available balance</span><span id="balanceSyncStatus">Saved on device</span></div>
       <strong id="balanceValue">Rs 0</strong>
+      <div class="balance-breakdown" aria-label="Monthly balance summary">
+        <span>Opening balance<b id="openingBalanceValue">Rs 0</b></span>
+        <span>Credit<b id="monthCreditValue">Rs 0</b></span>
+        <span>Debit<b id="monthDebitValue">Rs 0</b></span>
+      </div>
       <div class="balance-line"><span id="balanceLineFill"></span></div>
+    </section>
+
+    <section class="insights-section" aria-labelledby="insightsTitle">
+      <div class="section-title"><div><p class="eyebrow">A QUICK READ</p><h2 id="insightsTitle">Money pulse</h2></div><span id="insightsPeriod">This month</span></div>
+      <div class="insight-grid">
+        <article class="insight-card insight-card-primary"><span class="insight-icon">↘</span><small>Average debit</small><strong id="averageDebitValue">Rs 0</strong><span id="averageDebitMeta">No debits yet</span></article>
+        <article class="insight-card"><span class="insight-icon insight-icon-warm">✦</span><small>Top category</small><strong id="topCategoryValue">—</strong><span id="topCategoryMeta">No spending yet</span></article>
+        <article class="insight-card"><span class="insight-icon insight-icon-yellow">↗</span><small>Largest debit</small><strong id="largestDebitValue">Rs 0</strong><span id="largestDebitMeta">No debits yet</span></article>
+      </div>
     </section>
 
     <section class="section-block">
@@ -71,7 +85,7 @@
       <div class="type-toggle"><button type="button" class="type-option active" data-type="debit">Debit</button><button type="button" class="type-option" data-type="credit">Credit</button></div>
       <label>Amount<input id="amountInput" type="number" min="1" step="0.01" placeholder="0.00" required></label>
       <label>What was it for?<input id="noteInput" type="text" maxlength="60" placeholder="e.g. EB bill" required></label>
-      <label>Category<select id="categoryInput"><option>Food</option><option>EB Bill</option><option>Transfer</option><option>Salary</option><option>Travel</option><option>Shopping</option><option>Other</option></select></label>
+      <label>Category<select id="categoryInput"><option>Food</option><option>Bills</option><option>Rent</option><option>Transfer</option><option>Salary</option><option>Travel</option><option>Shopping</option><option>Other</option></select></label>
       <label>Date<input id="dateInput" type="date" required></label>
       <button class="primary-button" value="default">Save entry</button>
     </form>
@@ -79,7 +93,7 @@
 
   <dialog id="historyDialog" class="dialog">
     <form method="dialog">
-      <div class="dialog-header"><div><p class="eyebrow">ALL ACTIVITY</p><h2>History</h2></div><button type="button" class="close-button" aria-label="Close">&#215;</button></div>
+      <div class="dialog-header"><div><p class="eyebrow">ALL ACTIVITY</p><h2>History</h2></div></div>
       <div id="historySummary" class="history-summary"></div>
       <div id="historyList" class="history-list"></div>
       <div id="historyEmpty" class="empty-state"><div class="empty-mark">+</div><b>No history yet</b><span>Your saved entries will appear here.</span></div>
@@ -92,6 +106,13 @@
       <label>Profile name<input id="settingsProfileInput" type="text" maxlength="40" placeholder="e.g. Arun"></label>
       <div class="settings-account"><p class="eyebrow">SIGNED IN ACCOUNT</p><strong id="settingsAccountEmail">Offline mode</strong></div>
       <p class="dialog-copy">Google Drive and Sheets are connected directly to the signed-in account. Your monthly files are stored in that account's Drive.</p>
+      <section class="auto-import-settings" aria-labelledby="autoImportTitle">
+        <p class="eyebrow" id="autoImportTitle">AUTOMATIC IMPORT</p>
+        <p class="dialog-copy">Detected transactions are shown for review before they are saved. You can continue adding entries manually at any time.</p>
+        <button class="secondary-button" id="enableNotificationsButton" type="button">Enable payment notifications</button>
+        <button class="secondary-button" id="enableSmsButton" type="button">Enable bank SMS import</button>
+        <small id="autoImportStatus" class="auto-import-status"></small>
+      </section>
       <button class="secondary-button logout-button" id="logoutButton" type="button">Log out</button>
       <small class="developer-credit">Developed by Sudharshan <span aria-hidden="true">&#10084;</span></small>
     </form>
@@ -105,6 +126,20 @@
       <div class="dialog-actions">
         <button id="cancelDeleteButton" class="secondary-button" type="button">Cancel</button>
         <button id="confirmDeleteButton" class="primary-button delete-confirm-button" type="button">Delete entry</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="importReviewDialog" class="dialog delete-confirm-dialog" aria-labelledby="importReviewTitle">
+    <div class="delete-confirm-content">
+      <p class="eyebrow">AUTOMATIC IMPORT</p>
+      <h2 id="importReviewTitle">Review transaction</h2>
+      <p id="importReviewCopy" class="dialog-copy"></p>
+      <label>Description / note<input id="importNoteInput" type="text" maxlength="60" placeholder="Add a description" required></label>
+      <label>Category<select id="importCategoryInput"><option>Food</option><option>Bills</option><option>Rent</option><option>Transfer</option><option>Salary</option><option>Travel</option><option>Shopping</option><option>Other</option></select></label>
+      <div class="dialog-actions">
+        <button id="skipImportButton" class="secondary-button" type="button">Skip</button>
+        <button id="saveImportButton" class="primary-button" type="button">Save entry</button>
       </div>
     </div>
   </dialog>

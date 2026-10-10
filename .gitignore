@@ -1,10 +1,16 @@
-.env
+# Local environment values. Keep .env.example committed as a safe template.
+*.env
 .gradle/
 build/
 local.properties
-*.pyc
-*.pyo
-*.pyd
-*.env
-*.report
+.idea/
+*.iml
+.externalNativeBuild/
+.cxx/
+captures/
+*.apk
+*.aab
+*.jks
+*.keystore
+key.properties
 *.log

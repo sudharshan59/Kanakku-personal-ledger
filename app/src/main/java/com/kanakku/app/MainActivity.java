@@ -1,9 +1,16 @@
 package com.kanakku.app;
 
 import android.app.Activity;
+import android.Manifest;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Build;
+import android.provider.Settings;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -23,6 +30,7 @@ import java.util.Arrays;
 
 public class MainActivity extends Activity {
     private static final int AUTH_REQUEST_CODE = 1401;
+    private static final int SMS_PERMISSION_REQUEST_CODE = 1402;
     private static final Scope OPENID_SCOPE = new Scope("openid");
     private static final Scope EMAIL_SCOPE = new Scope("email");
     private static final Scope PROFILE_SCOPE = new Scope("profile");
@@ -34,6 +42,7 @@ public class MainActivity extends Activity {
     private String pendingToken;
     private long pendingTokenExpiresAt;
     private String pendingAuthError;
+    private final OnBackInvokedCallback backInvokedCallback = this::handleBackPressed;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,10 +61,28 @@ public class MainActivity extends Activity {
                 super.onPageFinished(view, url);
                 pageReady = true;
                 deliverPendingAuthResult();
+                deliverPendingTransactionCandidates();
             }
         });
         webView.loadUrl("file:///android_asset/index.html");
         setContentView(webView);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, backInvokedCallback);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        deliverPendingTransactionCandidates();
+    }
+
+    private void deliverPendingTransactionCandidates() {
+        if (!pageReady || webView == null) return;
+        String candidates = TransactionCandidateStore.consume(this);
+        if (!"[]".equals(candidates)) {
+            webView.evaluateJavascript("window.onAutomaticTransactions(" + JSONObject.quote(candidates) + ")", null);
+        }
     }
 
     public void beginGoogleAuth() {
@@ -140,14 +167,65 @@ public class MainActivity extends Activity {
     private class AuthBridge {
         @JavascriptInterface
         public void beginGoogleAuth() { MainActivity.this.beginGoogleAuth(); }
+
+        @JavascriptInterface
+        public void requestSmsImport() {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M
+                    && checkSelfPermission(Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.RECEIVE_SMS}, SMS_PERMISSION_REQUEST_CODE);
+            }
+        }
+
+        @JavascriptInterface
+        public void openNotificationAccessSettings() {
+            startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+        }
+
+        @JavascriptInterface
+        public boolean isNotificationImportEnabled() {
+            String enabled = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
+            String service = new ComponentName(MainActivity.this, TransactionNotificationListener.class).flattenToString();
+            return enabled != null && enabled.contains(service);
+        }
+
+        @JavascriptInterface
+        public boolean isSmsImportEnabled() {
+            return android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M
+                    || checkSelfPermission(Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == SMS_PERMISSION_REQUEST_CODE && pageReady) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            webView.evaluateJavascript("window.onSmsImportPermission(" + granted + ")", null);
+        }
     }
 
     @Override
     public void onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
+        handleBackPressed();
+    }
+
+    private void handleBackPressed() {
+        if (webView == null || !pageReady) {
             super.onBackPressed();
+            return;
         }
+        webView.evaluateJavascript("window.handleAndroidBack ? window.handleAndroidBack() : false", result -> {
+            if ("true".equals(result)) return;
+            if (webView.canGoBack()) webView.goBack();
+            else super.onBackPressed();
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backInvokedCallback);
+        }
+        super.onDestroy();
     }
 }
